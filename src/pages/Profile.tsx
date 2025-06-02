@@ -10,6 +10,55 @@ import {
   PencilIcon,
 } from '@heroicons/react/24/outline';
 
+// Common skills list for suggestions
+const commonSkills = [
+  // Programming Languages
+  'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust', 'Ruby', 'PHP',
+  'Swift', 'Kotlin', 'R', 'Scala', 'Perl', 'Haskell', 'MATLAB', 'Dart', 'Objective-C',
+
+  // Web Development (Frontend)
+  'HTML', 'CSS', 'SASS', 'LESS', 'Tailwind CSS', 'Bootstrap',
+  'React', 'Angular', 'Vue.js', 'Svelte', 'Next.js', 'Nuxt.js',
+
+  // Web Development (Backend)
+  'Node.js', 'Express.js', 'Django', 'Flask', 'FastAPI', 'Spring Boot',
+  'ASP.NET', 'Laravel', 'Ruby on Rails', 'NestJS', 'Hapi.js',
+
+  // Mobile Development
+  'React Native', 'Flutter', 'SwiftUI', 'Jetpack Compose', 'Ionic',
+
+  // Databases
+  'MongoDB', 'PostgreSQL', 'MySQL', 'SQLite', 'Firebase',
+  'Redis', 'Cassandra', 'Oracle DB', 'MariaDB', 'DynamoDB', 'Elasticsearch',
+
+  // Cloud & DevOps
+  'AWS', 'Azure', 'Google Cloud Platform', 'Heroku', 'Netlify', 'Vercel',
+  'Docker', 'Kubernetes', 'Terraform', 'Ansible', 'Jenkins', 'GitHub Actions',
+  'CI/CD', 'DevOps', 'Serverless', 'OpenShift',
+
+  // Version Control & Collaboration
+  'Git', 'GitHub', 'GitLab', 'Bitbucket', 'SVN',
+
+  // AI / Machine Learning / Deep Learning
+  'Machine Learning', 'Deep Learning', 'AI', 'Data Science',
+  'Computer Vision', 'NLP', 'Speech Recognition', 'Reinforcement Learning',
+  'TensorFlow', 'PyTorch', 'Keras', 'Scikit-learn', 'OpenCV',
+  'Transformers', 'Hugging Face', 'spaCy', 'NLTK', 'XGBoost', 'LightGBM',
+
+  // Data Engineering & Big Data
+  'Pandas', 'NumPy', 'Dask', 'Apache Spark', 'Apache Kafka',
+  'Hadoop', 'Airflow', 'ETL', 'Data Warehousing', 'Data Lake',
+
+  // Software Development Methodologies
+  'Agile', 'Scrum', 'Kanban', 'TDD', 'BDD', 'Waterfall',
+
+  // Software Engineering & Tools
+  'Design Patterns', 'System Design', 'OOP', 'Functional Programming',
+  'UML', 'UML Diagrams', 'Refactoring', 'Debugging', 'Unit Testing',
+  'Integration Testing', 'JIRA', 'Confluence', 'Visual Studio Code', 'Eclipse', 'IntelliJ IDEA'
+];
+
+
 interface ProfileData {
   name: string;
   university: string;
@@ -34,6 +83,8 @@ const Profile: React.FC = () => {
   });
 
   const [newSkill, setNewSkill] = useState('');
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -68,6 +119,27 @@ const Profile: React.FC = () => {
       ...prev,
       skills: prev.skills.filter(skill => skill !== skillToRemove)
     }));
+  };
+
+  const handleSkillInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewSkill(value);
+    
+    if (value.trim()) {
+      const filteredSuggestions = commonSkills.filter(skill =>
+        skill.toLowerCase().includes(value.toLowerCase())
+      );
+      setSkillSuggestions(filteredSuggestions);
+      setShowSuggestions(true);
+    } else {
+      setSkillSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setNewSkill(suggestion);
+    setShowSuggestions(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,20 +263,36 @@ const Profile: React.FC = () => {
                 ))}
               </div>
               {isEditing && (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Add a skill"
-                  />
-                  <button
-                    onClick={handleAddSkill}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    Add
-                  </button>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSkill}
+                      onChange={handleSkillInputChange}
+                      onFocus={() => newSkill.trim() && setShowSuggestions(true)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Add a skill"
+                    />
+                    <button
+                      onClick={handleAddSkill}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {showSuggestions && skillSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {skillSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-700"
+                        >
+                          {suggestion}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -313,4 +401,4 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile; 
+export default Profile;
