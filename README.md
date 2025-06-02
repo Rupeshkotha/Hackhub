@@ -31,7 +31,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 ### Prerequisites
 
 *   Node.js (v14 or higher recommended)
-*   npm or yarn
+*   npm
 *   A Firebase project
 
 ### Installation
