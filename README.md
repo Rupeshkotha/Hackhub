@@ -1,46 +1,99 @@
-# Getting Started with Create React App
+# HackHub: Hackathon Collaboration Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+HackHub is a platform designed to help students collaborate effectively during hackathons. It provides tools for generating project ideas, forming teams, building presentations, and managing resources.
 
-## Available Scripts
+## Features (Planned/In Progress)
 
-In the project directory, you can run:
+*   AI Idea Generator
+*   Team Formation
+*   Presentation Builder
+*   Shared Project Workspace
+*   Mentor Connect
+*   Resource Bank
+*   Hackathon Tracker
+*   User Authentication (Implemented)
+*   User Profiles (Implemented)
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+This project is built using the following technologies:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+*   **Frontend:** React, TypeScript, Tailwind CSS
+*   **Backend:** Node.js/Express (Planned)
+*   **Database:** Firebase Firestore (Used for profiles)
+*   **Authentication:** Firebase Authentication (Email/Password)
+*   **API:** OpenAI API (Planned for Idea Generator)
 
-### `npm test`
+## Getting Started
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+*   Node.js (v14 or higher recommended)
+*   npm or yarn
+*   A Firebase project
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1.  Clone the repository:
 
-### `npm run eject`
+    ```bash
+    git clone https://github.com/Rupeshkotha/Hackhub.git
+    ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+2.  Navigate into the project directory:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+    ```bash
+    cd Hackhub
+    ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+3.  Install dependencies:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
 
-## Learn More
+### Firebase Setup
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1.  Go to your Firebase project console.
+2.  Enable **Email/Password** authentication in the Authentication section.
+3.  Go to the Firestore Database section and create a new database.
+4.  Get your Firebase Web App configuration. It should look something like this:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    ```javascript
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    ```
+
+5.  Create a file named `.env.local` in the root of your project and add your Firebase configuration as environment variables:
+
+    ```env
+    REACT_APP_FIREBASE_API_KEY=YOUR_API_KEY
+    REACT_APP_FIREBASE_AUTH_DOMAIN=YOUR_AUTH_DOMAIN
+    REACT_APP_FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
+    REACT_APP_FIREBASE_STORAGE_BUCKET=YOUR_STORAGE_BUCKET
+    REACT_APP_FIREBASE_MESSAGING_SENDER_ID=YOUR_MESSAGING_SENDER_ID
+    REACT_APP_FIREBASE_APP_ID=YOUR_APP_ID
+    ```
+    Replace the placeholder values with your actual Firebase config.
+
+### Running the Project
+
+To start the development server, run:
+
+```bash
+npm start
+# or
+yarn start
+```
+
+This will open the application in your browser at `http://localhost:3000` (or another available port).
