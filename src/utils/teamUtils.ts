@@ -87,7 +87,24 @@ export const getUserTeams = async (userId: string): Promise<Team[]> => {
 // Update a team
 export const updateTeam = async (teamId: string, updates: Partial<Team>): Promise<void> => {
   const teamRef = doc(db, 'teams', teamId);
-  await updateDoc(teamRef, updates);
+  
+  // Create a new object with only the fields that are defined
+  const updateData: Record<string, any> = {};
+  
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.requiredSkills !== undefined) updateData.requiredSkills = updates.requiredSkills;
+  if (updates.maxMembers !== undefined) updateData.maxMembers = updates.maxMembers;
+  if (updates.hackathonId !== undefined) updateData.hackathonId = updates.hackathonId;
+  if (updates.hackathonName !== undefined) updateData.hackathonName = updates.hackathonName;
+  if (updates.members !== undefined) updateData.members = updates.members;
+  if (updates.createdAt !== undefined) updateData.createdAt = updates.createdAt;
+  if (updates.createdBy !== undefined) updateData.createdBy = updates.createdBy;
+
+  // Only update if we have data to update
+  if (Object.keys(updateData).length > 0) {
+    await updateDoc(teamRef, updateData);
+  }
 };
 
 // Delete a team
@@ -223,4 +240,4 @@ export const rejectJoinRequest = async (teamId: string, userId: string): Promise
   await updateDoc(teamRef, {
     joinRequests: arrayRemove(userId),
   });
-}; 
+};

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Team, getUserTeams, getAvailableTeams, deleteTeam, addTeamMember, removeTeamMember, getTeamByCode, TeamMember, getTeam, addJoinRequest, acceptJoinRequest, rejectJoinRequest } from '../utils/teamUtils';
+import { Team, getUserTeams, getAvailableTeams, deleteTeam, addTeamMember, removeTeamMember, getTeamByCode, TeamMember, getTeam, addJoinRequest, acceptJoinRequest, rejectJoinRequest, updateTeam } from '../utils/teamUtils';
 import TeamForm from '../components/TeamForm';
 import TeamCard from '../components/TeamCard';
 import { getUserProfileData } from '../utils/firestoreUtils';
+import { XMarkIcon, KeyIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 const Teams: React.FC = () => {
   const { currentUser } = useAuth();
@@ -105,10 +106,21 @@ const Teams: React.FC = () => {
     loadTeams();
   };
 
-  const handleEditTeam = (team: Team) => {
-    // Just close the modal and reload teams. loadTeams will fetch the updated team.
-    setEditingTeam(null);
-    loadTeams();
+  const handleEditTeam = async (team: Team) => {
+    try {
+      // Update the team in the local state first
+      setTeams(prevTeams => {
+        return prevTeams.map(t => 
+          t.id === team.id ? { ...t, ...team } : t
+        );
+      });
+
+      // Close the modal
+      setEditingTeam(null);
+    } catch (err) {
+      setError('Failed to update team');
+      console.error(err);
+    }
   };
 
   const handleDeleteTeam = async (teamId: string) => {
@@ -384,56 +396,87 @@ const Teams: React.FC = () => {
       </div>
 
       {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50"> {/* Added z-index */}
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"> {/* Added max height and overflow */}
-            <h2 className="text-xl font-semibold mb-4">Create New Team</h2>
-            <TeamForm
-              onSubmit={handleCreateTeam}
-              onCancel={() => setShowCreateModal(false)}
-            />
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-hidden">
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Create New Team</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <TeamForm
+                onSubmit={handleCreateTeam}
+                onCancel={() => setShowCreateModal(false)}
+              />
+            </div>
           </div>
         </div>
       )}
 
       {showJoinModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50"> {/* Added z-index */}
-          <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"> {/* Added max height and overflow */}
-            <h2 className="text-xl font-semibold mb-4">Join Team</h2>
-            <form onSubmit={handleJoinByCode} className="space-y-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl max-w-md w-full p-8 shadow-2xl transform transition-all">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Join Team</h2>
+              <button
+                onClick={() => {
+                  setShowJoinModal(false);
+                  setTeamCode('');
+                  setError('');
+                }}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <form onSubmit={handleJoinByCode} className="space-y-6">
               <div>
-                <label htmlFor="teamCode" className="block text-sm font-medium text-gray-700">
-                  Team Code
+                <label htmlFor="teamCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Team Code
                 </label>
-                <input
-                  type="text"
-                  id="teamCode"
-                  value={teamCode}
-                  onChange={(e) => setTeamCode(e.target.value)}
-                  placeholder="Enter team code"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  required
-                />
-              </div>
-              {error && ( // Display error within the modal if join by code fails
-                  <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-                    {error}
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="teamCode"
+                    value={teamCode}
+                    onChange={(e) => setTeamCode(e.target.value)}
+                    placeholder="e.g., ABC123"
+                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white pl-4 pr-12 py-3"
+                    required
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    <KeyIcon className="h-5 w-5 text-gray-400" />
                   </div>
-                )}
-              <div className="flex justify-end space-x-3">
+                </div>
+                <p className="mt-2 text-sm text-gray-500">
+                  Enter the 6-character code shared by your team lead
+                </p>
+              </div>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-center">
+                  <ExclamationCircleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowJoinModal(false);
                     setTeamCode('');
-                    setError(''); // Clear error on modal close
+                    setError('');
                   }}
-                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 text-sm font-medium text-white hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
                   Join Team
                 </button>
@@ -444,14 +487,24 @@ const Teams: React.FC = () => {
       )}
 
       {editingTeam && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50"> {/* Added z-index */}
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"> {/* Added max height and overflow */}
-            <h2 className="text-xl font-semibold mb-4">Edit Team</h2>
-            <TeamForm
-              initialData={editingTeam}
-              onSubmit={handleEditTeam}
-              onCancel={() => setEditingTeam(null)}
-            />
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-hidden">
+          <div className="bg-white rounded-xl max-w-2xl w-full shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Team</h2>
+              <button
+                onClick={() => setEditingTeam(null)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <TeamForm
+                initialData={editingTeam}
+                onSubmit={handleEditTeam}
+                onCancel={() => setEditingTeam(null)}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -459,4 +512,4 @@ const Teams: React.FC = () => {
   );
 };
 
-export default Teams; 
+export default Teams;

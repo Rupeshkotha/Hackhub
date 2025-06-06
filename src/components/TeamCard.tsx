@@ -2,6 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Team, TeamMember } from '../utils/teamUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserProfileData, UserProfileData } from '../utils/firestoreUtils';
+import { 
+  UserGroupIcon, 
+  CodeBracketIcon, 
+  PencilSquareIcon, 
+  TrashIcon, 
+  UserPlusIcon, 
+  ArrowRightOnRectangleIcon,
+  XMarkIcon,
+  CheckIcon,
+  ClockIcon,
+  TrophyIcon,
+  ChevronDownIcon,
+  UserIcon
+} from '@heroicons/react/24/outline';
 
 interface TeamCardProps {
   team: Team;
@@ -27,26 +41,26 @@ const TeamCard: React.FC<TeamCardProps> = ({
   const { currentUser } = useAuth();
   const [membersWithNames, setMembersWithNames] = useState<TeamMember[]>(team.members);
   const [requestingMembers, setRequestingMembers] = useState<(UserProfileData & { id: string })[]>([]);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     const fetchMemberNames = async () => {
       const updatedMembers = await Promise.all(team.members.map(async (member) => {
-        // Only fetch if the current name is 'Anonymous' or seems like a placeholder
         if (member.name === 'Anonymous' || !member.name || member.name.includes('@')) {
           const profile = await getUserProfileData(member.id);
           if (profile && profile.name) {
             return { ...member, name: profile.name, avatar: profile.profilePicture };
           } else if (currentUser?.uid === member.id && currentUser.displayName) {
-             return { ...member, name: currentUser.displayName, avatar: currentUser.photoURL || member.avatar };
+            return { ...member, name: currentUser.displayName, avatar: currentUser.photoURL || member.avatar };
           }
         }
-        return member; // Return original member if name is fine or profile not found
+        return member;
       }));
       setMembersWithNames(updatedMembers);
     };
 
     fetchMemberNames();
-  }, [team.members, currentUser]); // Re-run if team members change or currentUser changes
+  }, [team.members, currentUser]);
 
   useEffect(() => {
     const fetchRequestingMemberNames = async () => {
@@ -62,159 +76,206 @@ const TeamCard: React.FC<TeamCardProps> = ({
     };
 
     fetchRequestingMemberNames();
-  }, [team.joinRequests]); // Re-run when join requests change
+  }, [team.joinRequests]);
 
   const isTeamLead = currentUser?.uid === team.createdBy;
   const isMember = membersWithNames.some(member => member.id === currentUser?.uid);
   const isFull = membersWithNames.length >= team.maxMembers;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-shadow duration-300">
       <div className="p-6">
         <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
-            <p className="mt-1 text-sm text-gray-500">{team.description}</p>
-            <div className="mt-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <div className="flex-1">
+            <div className="flex items-center space-x-3">
+              <h3 className="text-xl font-bold text-gray-900">{team.name}</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                 {team.hackathonName}
               </span>
             </div>
+            <p className="mt-2 text-gray-600 line-clamp-2">{team.description}</p>
+            
+            <div className="mt-4 flex flex-wrap gap-2">
+              {team.requiredSkills.map((skill) => (
+                <span
+                  key={skill}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                >
+                  <CodeBracketIcon className="h-3 w-3 mr-1" />
+                  {skill}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-4 flex items-center text-sm text-gray-500">
+              <UserGroupIcon className="h-5 w-5 mr-1.5" />
+              <span>{membersWithNames.length} / {team.maxMembers} members</span>
+            </div>
+
             {isTeamLead && team.teamCode && (
-              <div className="mt-4 bg-indigo-50 p-3 rounded-md">
-                <p className="text-sm font-medium text-indigo-800">Team Code: {team.teamCode}</p>
-                <p className="text-xs text-indigo-600 mt-1">Share this code with others to join your team</p>
+              <div className="mt-4 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-indigo-800">Team Code</p>
+                    <p className="text-2xl font-mono font-bold text-indigo-600 mt-1">{team.teamCode}</p>
+                  </div>
+                  <TrophyIcon className="h-8 w-8 text-indigo-400" />
+                </div>
+                <p className="text-xs text-indigo-600 mt-2">Share this code with others to join your team</p>
               </div>
             )}
           </div>
+
           {isTeamLead && (
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 ml-4">
               <button
                 onClick={onEdit}
-                className="text-indigo-600 hover:text-indigo-900"
+                className="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                title="Edit Team"
               >
-                Edit
+                <PencilSquareIcon className="h-5 w-5" />
               </button>
               <button
                 onClick={onDelete}
-                className="text-red-600 hover:text-red-900"
+                className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                title="Delete Team"
               >
-                Delete
+                <TrashIcon className="h-5 w-5" />
               </button>
             </div>
           )}
         </div>
 
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-900">Required Skills</h3>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {team.requiredSkills.map((skill, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-        </div>
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <button
+            onClick={() => setShowMembers(!showMembers)}
+            className="w-full flex items-center justify-between text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors duration-200"
+          >
+            <span>Team Members</span>
+         <ChevronDownIcon
+  className={`h-5 w-5 transform transition-transform duration-200 ${
+    showMembers ? 'rotate-180' : ''
+  }`}
+/>
 
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-900">Members ({membersWithNames.length}/{team.maxMembers})</h3>
-          <ul className="mt-2 space-y-2">
-            {membersWithNames.map((member) => (
-              <li key={member.id} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {member.avatar && (
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      className="h-6 w-6 rounded-full mr-2"
-                    />
-                  )}
-                  <span className="text-sm text-gray-900">{member.name}</span>
-                  <span className="ml-2 text-xs text-gray-500">({member.role})</span>
-                </div>
-                {isTeamLead && member.id !== currentUser?.uid && onRemoveMember && (
-                  <button
-                    onClick={() => onRemoveMember(member.id)}
-                    className="text-red-600 hover:text-red-900 text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+          </button>
 
-        {isTeamLead && requestingMembers.length > 0 && (
-          <div className="mt-6 border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900">Join Requests ({requestingMembers.length})</h3>
-            <ul className="mt-2 space-y-2">
-              {requestingMembers.map((member) => (
-                <li key={member.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {member.profilePicture && (
+          {showMembers && (
+            <div className="mt-4 space-y-3">
+              {membersWithNames.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center space-x-3">
+                    {member.avatar ? (
                       <img
-                        src={member.profilePicture}
+                        src={member.avatar}
                         alt={member.name}
-                        className="h-6 w-6 rounded-full mr-2"
+                        className="h-8 w-8 rounded-full"
                       />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <UserIcon className="h-5 w-5 text-indigo-600" />
+                      </div>
                     )}
-                    <span className="text-sm font-medium text-gray-900">{member.name}</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                      <p className="text-xs text-gray-500">{member.role}</p>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    {onAcceptRequest && (
-                      <button
-                        onClick={() => onAcceptRequest(member.id)}
-                        className="text-green-600 hover:text-green-900 text-sm"
-                      >
-                        Accept
-                      </button>
-                    )}
-                    {onRejectRequest && (
-                      <button
-                        onClick={() => onRejectRequest(member.id)}
-                        className="text-red-600 hover:text-red-900 text-sm"
-                      >
-                        Reject
-                      </button>
-                    )}
-                  </div>
-                </li>
+                  {isTeamLead && member.id !== currentUser?.uid && (
+                    <button
+                      onClick={() => onRemoveMember?.(member.id)}
+                      className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      title="Remove Member"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
               ))}
-            </ul>
-          </div>
-        )}
+            </div>
+          )}
 
-        {!isTeamLead && (membersWithNames.length < team.maxMembers || isMember) && (
-          <div className="mt-6">
-            {isMember ? (
-              <button
-                onClick={onLeave}
-                className="w-full rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-              >
-                Leave Team
-              </button>
-            ) : (
+          {requestingMembers.length > 0 && isTeamLead && (
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Join Requests</h4>
+              <div className="space-y-3">
+                {requestingMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      {member.profilePicture ? (
+                        <img
+                          src={member.profilePicture}
+                          alt={member.name}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-yellow-600" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                        <p className="text-xs text-gray-500">Requesting to join</p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onAcceptRequest?.(member.id)}
+                        className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                        title="Accept Request"
+                      >
+                        <CheckIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => onRejectRequest?.(member.id)}
+                        className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                        title="Reject Request"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end">
+            {!isMember && !isFull && (
               <button
                 onClick={onJoin}
-                disabled={isFull}
-                className={`w-full rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isFull
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
-                }`}
+                className="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 text-sm font-medium text-white hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
               >
-                {isFull ? 'Team is Full' : 'Join Team'}
+                <UserPlusIcon className="h-5 w-5 mr-2" />
+                Join Team
               </button>
             )}
+            {isMember && !isTeamLead && (
+              <button
+                onClick={onLeave}
+                className="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+              >
+                <ArrowRightOnRectangleIcon className="h-5 w-5 mr-2" />
+                Leave Team
+              </button>
+            )}
+            {isFull && !isMember && (
+              <div className="inline-flex items-center px-4 py-2 rounded-lg bg-gray-100 text-sm font-medium text-gray-500">
+                <ClockIcon className="h-5 w-5 mr-2" />
+                Team is Full
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default TeamCard; 
+export default TeamCard;
