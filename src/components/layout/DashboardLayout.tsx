@@ -19,7 +19,7 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Overview', path: '/dashboard', icon: HomeIcon },
   { name: 'My Projects', path: '/dashboard/projects', icon: ChartBarIcon },
-  { name: 'Team Hub', path: '/dashboard/teams', icon: UserGroupIcon },
+  { name: 'Team Hub', path: '/teams', icon: UserGroupIcon },
   { name: 'Idea Generator', path: '/dashboard/idea-generator', icon: LightBulbIcon },
   { name: 'Hackathons', path: '/dashboard/hackathons', icon: CalendarIcon },
   { name: 'Resources', path: '/dashboard/resources', icon: BookOpenIcon },

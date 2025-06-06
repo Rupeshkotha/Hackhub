@@ -1,4 +1,4 @@
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export interface Skill {
@@ -74,6 +74,22 @@ export const saveUserProfile = async (userId: string, profileData: UserProfileDa
     return true;
   } catch (error) {
     console.error('Error saving profile:', error);
+    throw error;
+  }
+};
+
+// Function to get user profile data
+export const getUserProfileData = async (userId: string) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    if (userDoc.exists()) {
+      return userDoc.data() as UserProfileData;
+    } else {
+      return null; // Profile not found
+    }
+  } catch (error) {
+    console.error('Error getting profile:', error);
     throw error;
   }
 }; 

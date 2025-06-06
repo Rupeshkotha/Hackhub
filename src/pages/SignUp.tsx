@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from '../firebase'; // Import the auth instance
 import { useNavigate, Link } from 'react-router-dom'; // For redirection after signup
 import { LockClosedIcon, EnvelopeIcon, UserIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -47,7 +47,15 @@ const SignUp: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      
+      // Update user profile with display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: formData.name
+        });
+      }
+
       navigate('/');
     } catch (error: any) {
       setError(error.message);
