@@ -4,6 +4,7 @@ import { Team, getUserTeams, getAvailableTeams, deleteTeam, addTeamMember, remov
 import TeamForm from '../components/TeamForm';
 import TeamCard from '../components/TeamCard';
 import { getUserProfileData } from '../utils/firestoreUtils';
+import SkillMatch from '../components/SkillMatch';
 
 const Teams: React.FC = () => {
   const { currentUser } = useAuth();
@@ -14,6 +15,8 @@ const Teams: React.FC = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [teamCode, setTeamCode] = useState('');
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [showSkillMatch, setShowSkillMatch] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
   useEffect(() => {
     loadTeams();
@@ -105,10 +108,31 @@ const Teams: React.FC = () => {
     loadTeams();
   };
 
-  const handleEditTeam = (team: Team) => {
-    // Just close the modal and reload teams. loadTeams will fetch the updated team.
-    setEditingTeam(null);
-    loadTeams();
+  const handleEditTeam = async (team: Team) => {
+    try {
+      // Close the modal
+      setEditingTeam(null);
+      
+      // Fetch the latest team data
+      const updatedTeam = await getTeam(team.id);
+      if (!updatedTeam) {
+        throw new Error('Failed to fetch updated team');
+      }
+
+      // Update the teams list with the new data
+      setTeams(prevTeams => {
+        const index = prevTeams.findIndex(t => t.id === updatedTeam.id);
+        if (index !== -1) {
+          const newTeams = [...prevTeams];
+          newTeams[index] = updatedTeam;
+          return newTeams;
+        }
+        return prevTeams;
+      });
+    } catch (err) {
+      console.error('Error updating team:', err);
+      setError('Failed to update team');
+    }
   };
 
   const handleDeleteTeam = async (teamId: string) => {
@@ -325,6 +349,28 @@ const Teams: React.FC = () => {
     }
   };
 
+  const handleSkillMatch = (team: Team) => {
+    setSelectedTeam(team);
+    setShowSkillMatch(true);
+  };
+
+  const handleMatch = async (userId: string) => {
+    if (!selectedTeam) return;
+    try {
+      // Send a join request to the matched user
+      await addJoinRequest(selectedTeam.id, userId);
+      alert(`Join request sent to user ${userId}!`);
+    } catch (err) {
+      setError('Failed to send match request');
+      console.error(err);
+      alert('Failed to send join request.');
+    }
+  };
+
+  const handleSkip = () => {
+    // Just move to the next potential member
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -379,6 +425,7 @@ const Teams: React.FC = () => {
             onRemoveMember={(memberId) => handleRemoveMember(team.id, memberId)}
             onAcceptRequest={(memberId) => handleAcceptRequest(team.id, memberId)}
             onRejectRequest={(memberId) => handleRejectRequest(team.id, memberId)}
+            onSkillMatch={() => handleSkillMatch(team)}
           />
         ))}
       </div>
@@ -451,6 +498,27 @@ const Teams: React.FC = () => {
               initialData={editingTeam}
               onSubmit={handleEditTeam}
               onCancel={() => setEditingTeam(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {showSkillMatch && selectedTeam && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Find Team Members</h2>
+              <button
+                onClick={() => setShowSkillMatch(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <SkillMatch
+              team={selectedTeam}
+              onMatch={handleMatch}
+              onSkip={handleSkip}
             />
           </div>
         </div>

@@ -43,15 +43,52 @@ const generateTeamCode = () => {
 
 // Create a new team
 export const createTeam = async (teamData: Omit<Team, 'id' | 'teamCode'>): Promise<string> => {
-  const teamRef = doc(collection(db, 'teams'));
-  const teamCode = generateTeamCode();
-  const teamWithId = {
-    ...teamData,
-    id: teamRef.id,
-    teamCode,
-  };
-  await setDoc(teamRef, teamWithId);
-  return teamRef.id;
+  try {
+    // Generate a unique team code
+    const teamCode = generateTeamCode();
+    
+    // Create the team document with all required fields
+    const teamRef = doc(collection(db, 'teams'));
+    
+    // Convert Date to Firestore Timestamp
+    const createdAt = teamData.createdAt instanceof Date 
+      ? teamData.createdAt 
+      : new Date();
+
+    // Ensure all fields have default values and are in the correct format
+    const newTeam = {
+      id: teamRef.id,
+      teamCode,
+      name: teamData.name || '',
+      description: teamData.description || '',
+      requiredSkills: Array.isArray(teamData.requiredSkills) ? teamData.requiredSkills : [],
+      maxMembers: typeof teamData.maxMembers === 'number' ? teamData.maxMembers : 4,
+      hackathonId: teamData.hackathonId || '',
+      hackathonName: teamData.hackathonName || '',
+      members: Array.isArray(teamData.members) ? teamData.members.map(member => ({
+        id: member.id || '',
+        name: member.name || 'Anonymous',
+        role: member.role || 'Member',
+        skills: Array.isArray(member.skills) ? member.skills : [],
+        ...(member.avatar ? { avatar: member.avatar } : {})
+      })) : [],
+      createdAt,
+      createdBy: teamData.createdBy || '',
+      joinRequests: Array.isArray(teamData.joinRequests) ? teamData.joinRequests : []
+    };
+
+    // Validate required fields
+    if (!newTeam.hackathonId || !newTeam.hackathonName || !newTeam.createdBy) {
+      throw new Error('Missing required fields');
+    }
+
+    console.log('Creating new team with data:', newTeam);
+    await setDoc(teamRef, newTeam);
+    return teamRef.id;
+  } catch (error) {
+    console.error('Error creating team:', error);
+    throw error;
+  }
 };
 
 // Get a team by code
@@ -86,8 +123,38 @@ export const getUserTeams = async (userId: string): Promise<Team[]> => {
 
 // Update a team
 export const updateTeam = async (teamId: string, updates: Partial<Team>): Promise<void> => {
+  console.log('updateTeam called with:', { teamId, updates });
+  
   const teamRef = doc(db, 'teams', teamId);
-  await updateDoc(teamRef, updates);
+  const teamDoc = await getDoc(teamRef);
+  
+  if (!teamDoc.exists()) {
+    throw new Error('Team not found');
+  }
+
+  const currentTeam = teamDoc.data() as Team;
+  console.log('Current team data:', currentTeam);
+
+  // Create the update object with only defined fields
+  const updateData: { [key: string]: any } = {};
+  
+  // Only include fields that are defined in the updates
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.requiredSkills !== undefined) {
+    updateData.requiredSkills = Array.isArray(updates.requiredSkills) ? updates.requiredSkills : [];
+  }
+  if (updates.maxMembers !== undefined) updateData.maxMembers = updates.maxMembers;
+  if (updates.hackathonId !== undefined) updateData.hackathonId = updates.hackathonId;
+  if (updates.hackathonName !== undefined) updateData.hackathonName = updates.hackathonName;
+  if (updates.members !== undefined) updateData.members = updates.members;
+  if (updates.joinRequests !== undefined) updateData.joinRequests = updates.joinRequests;
+
+  console.log('Final update data:', updateData);
+
+  // Update the document with only the defined fields
+  await updateDoc(teamRef, updateData);
+  console.log('Update completed');
 };
 
 // Delete a team
@@ -223,4 +290,33 @@ export const rejectJoinRequest = async (teamId: string, userId: string): Promise
   await updateDoc(teamRef, {
     joinRequests: arrayRemove(userId),
   });
+};
+
+// Get teams where a user has a pending join request
+export const getTeamsWithJoinRequestFromUser = async (userId: string): Promise<Team[]> => {
+  try {
+    const teamsQuery = query(
+      collection(db, 'teams'),
+      where('joinRequests', 'array-contains', userId)
+    );
+    const teamsSnapshot = await getDocs(teamsQuery);
+    return teamsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }) as Team);
+  } catch (error) {
+    console.error('Error getting teams with join requests for user:', error);
+    throw error;
+  }
+};
+
+// Helper function to get TeamMember data from a user object (e.g., from Firebase Auth)
+export const getTeamMemberDataFromUser = (user: any): TeamMember => {
+  // Assuming the user object has properties like uid, displayName, photoURL
+  // You might need to adjust property names based on your user structure
+  return {
+    id: user.uid,
+    name: user.displayName || 'Anonymous',
+    role: 'Member', // Default role when joining via request/skill match
+    skills: [], // Skills will likely be on the user's profile, not directly on the auth user object
+    // Conditionally include avatar only if photoURL exists
+    ...(user.photoURL ? { avatar: user.photoURL } : {}),
+  };
 }; 

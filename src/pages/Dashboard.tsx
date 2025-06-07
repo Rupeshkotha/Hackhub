@@ -9,6 +9,7 @@ import {
   BookOpenIcon,
   BellIcon,
 } from '@heroicons/react/24/outline';
+import IncomingRequests from '../components/IncomingRequests';
 
 const Dashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -89,13 +90,7 @@ const Dashboard: React.FC = () => {
           {/* Team Invitations */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Team Invitations</h2>
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No pending invitations</p>
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                  Find Teams
-                </button>
-              </div>
+              <IncomingRequests />
             </div>
           </div>
         </div>

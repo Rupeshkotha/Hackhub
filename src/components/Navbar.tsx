@@ -1,73 +1,144 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { UserCircleIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 
 const Navbar: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      navigate('/login');
     } catch (error) {
       console.error('Failed to log out:', error);
     }
   };
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-blue-600">HackHub</span>
+    <nav className="glass sticky top-0 z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <span className="text-white font-bold">H</span>
+            </div>
+            <span className="text-xl font-bold gradient-text">HackHub</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link to="/" className="text-text-secondary hover:text-text transition-colors">
+              Home
             </Link>
+            {currentUser ? (
+              <>
+                <Link to="/dashboard" className="text-text-secondary hover:text-text transition-colors">
+                  Dashboard
+                </Link>
+                <Link to="/profile" className="text-text-secondary hover:text-text transition-colors">
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="btn btn-outline"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-outline">
+                  Login
+                </Link>
+                <Link to="/signup" className="btn btn-primary">
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 rounded-lg hover:bg-surface transition-colors"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <svg
+              className="w-6 h-6 text-text"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              {isMenuOpen ? (
+                <path d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 space-y-4">
+            <Link
+              to="/"
+              className="block text-text-secondary hover:text-text transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
             {currentUser ? (
               <>
                 <Link
                   to="/dashboard"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="block text-text-secondary hover:text-text transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-gray-700 hover:text-blue-600 p-2 rounded-md"
-                  title="Profile"
+                  className="block text-text-secondary hover:text-text transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  <UserCircleIcon className="h-6 w-6" />
+                  Profile
                 </Link>
                 <button
-                  onClick={handleLogout}
-                  className="text-gray-700 hover:text-blue-600 p-2 rounded-md"
-                  title="Logout"
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="btn btn-outline w-full"
                 >
-                  <ArrowLeftOnRectangleIcon className="h-6 w-6" />
+                  Logout
                 </button>
               </>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="btn btn-outline w-full"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  Log In
+                  Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium"
+                  className="btn btn-primary w-full"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Sign Up
                 </Link>
               </>
             )}
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );

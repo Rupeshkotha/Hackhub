@@ -12,6 +12,7 @@ interface TeamCardProps {
   onRemoveMember?: (memberId: string) => void;
   onAcceptRequest?: (memberId: string) => void;
   onRejectRequest?: (memberId: string) => void;
+  onSkillMatch?: () => void;
 }
 
 const TeamCard: React.FC<TeamCardProps> = ({
@@ -23,30 +24,31 @@ const TeamCard: React.FC<TeamCardProps> = ({
   onRemoveMember,
   onAcceptRequest,
   onRejectRequest,
+  onSkillMatch
 }) => {
   const { currentUser } = useAuth();
   const [membersWithNames, setMembersWithNames] = useState<TeamMember[]>(team.members);
   const [requestingMembers, setRequestingMembers] = useState<(UserProfileData & { id: string })[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const fetchMemberNames = async () => {
       const updatedMembers = await Promise.all(team.members.map(async (member) => {
-        // Only fetch if the current name is 'Anonymous' or seems like a placeholder
         if (member.name === 'Anonymous' || !member.name || member.name.includes('@')) {
           const profile = await getUserProfileData(member.id);
           if (profile && profile.name) {
             return { ...member, name: profile.name, avatar: profile.profilePicture };
           } else if (currentUser?.uid === member.id && currentUser.displayName) {
-             return { ...member, name: currentUser.displayName, avatar: currentUser.photoURL || member.avatar };
+            return { ...member, name: currentUser.displayName, avatar: currentUser.photoURL || member.avatar };
           }
         }
-        return member; // Return original member if name is fine or profile not found
+        return member;
       }));
       setMembersWithNames(updatedMembers);
     };
 
     fetchMemberNames();
-  }, [team.members, currentUser]); // Re-run if team members change or currentUser changes
+  }, [team.members, currentUser]);
 
   useEffect(() => {
     const fetchRequestingMemberNames = async () => {
@@ -62,156 +64,182 @@ const TeamCard: React.FC<TeamCardProps> = ({
     };
 
     fetchRequestingMemberNames();
-  }, [team.joinRequests]); // Re-run when join requests change
+  }, [team.joinRequests]);
 
-  const isTeamLead = currentUser?.uid === team.createdBy;
-  const isMember = membersWithNames.some(member => member.id === currentUser?.uid);
-  const isFull = membersWithNames.length >= team.maxMembers;
+  const isTeamLead = currentUser && team.members.some(member => 
+    member.id === currentUser.uid && member.role === 'Team Lead'
+  );
+
+  const isMember = currentUser && team.members.some(member => member.id === currentUser.uid);
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-      <div className="p-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
-            <p className="mt-1 text-sm text-gray-500">{team.description}</p>
-            <div className="mt-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {team.hackathonName}
-              </span>
-            </div>
-            {isTeamLead && team.teamCode && (
-              <div className="mt-4 bg-indigo-50 p-3 rounded-md">
-                <p className="text-sm font-medium text-indigo-800">Team Code: {team.teamCode}</p>
-                <p className="text-xs text-indigo-600 mt-1">Share this code with others to join your team</p>
-              </div>
-            )}
-          </div>
+    <div className="card glass hover:scale-[1.02] transition-all duration-300 p-6 space-y-6">
+      {/* Header and Actions */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-xl font-bold gradient-text">{team.name}</h3>
+          <p className="text-text-secondary text-sm mt-1">{team.hackathonName}</p>
+        </div>
+        <div className="flex items-center space-x-2">
           {isTeamLead && (
-            <div className="flex space-x-2">
+            <>
               <button
                 onClick={onEdit}
-                className="text-indigo-600 hover:text-indigo-900"
+                className="p-2 rounded-lg hover:bg-surface transition-colors"
+                title="Edit Team"
               >
-                Edit
+                <svg className="w-5 h-5 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
               </button>
               <button
                 onClick={onDelete}
-                className="text-red-600 hover:text-red-900"
+                className="p-2 rounded-lg hover:bg-error/20 text-error transition-colors"
+                title="Delete Team"
               >
-                Delete
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
-            </div>
+            </>
           )}
         </div>
+      </div>
 
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-900">Required Skills</h3>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {team.requiredSkills.map((skill, index) => (
+      {/* Description */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-text-secondary">Description</h4>
+        <p className="text-text text-sm line-clamp-3">{team.description}</p>
+      </div>
+
+      {/* Required Skills */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-semibold text-text-secondary">Required Skills</h4>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {team.requiredSkills.length > 0 ? (
+            team.requiredSkills.map((skill, index) => (
               <span
                 key={index}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                className="px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30"
               >
                 {skill}
               </span>
-            ))}
-          </div>
+            ))
+          ) : (
+            <span className="text-text-secondary text-sm italic">No required skills specified.</span>
+          )}
         </div>
+      </div>
 
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-900">Members ({membersWithNames.length}/{team.maxMembers})</h3>
-          <ul className="mt-2 space-y-2">
-            {membersWithNames.map((member) => (
-              <li key={member.id} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {member.avatar && (
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      className="h-6 w-6 rounded-full mr-2"
-                    />
-                  )}
-                  <span className="text-sm text-gray-900">{member.name}</span>
-                  <span className="ml-2 text-xs text-gray-500">({member.role})</span>
-                </div>
-                {isTeamLead && member.id !== currentUser?.uid && onRemoveMember && (
-                  <button
-                    onClick={() => onRemoveMember(member.id)}
-                    className="text-red-600 hover:text-red-900 text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+      {/* Members */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-text-secondary">Team Members</h4>
+          <span className="text-text-secondary text-sm">
+            {team.members.length}/{team.maxMembers}
+          </span>
         </div>
+        <div className="flex -space-x-2 mt-2">
+          {membersWithNames.map((member) => (
+            <div
+              key={member.id}
+              className="relative group"
+              title={`${member.name} (${member.role})`}
+            >
+              <img
+                src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || '')}&background=6366f1&color=fff`}
+                alt={member.name || 'Anonymous'}
+                className="w-8 h-8 rounded-full border-2 border-surface object-cover"
+              />
+              {isTeamLead && member.id !== currentUser?.uid && (
+                <button
+                  onClick={() => onRemoveMember?.(member.id)}
+                  className="absolute -top-1 -right-1 p-1 bg-error rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove Member"
+                >
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
-        {isTeamLead && requestingMembers.length > 0 && (
-          <div className="mt-6 border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900">Join Requests ({requestingMembers.length})</h3>
-            <ul className="mt-2 space-y-2">
+      {/* Join Requests */}
+      {isTeamLead && requestingMembers.length > 0 && (
+        <div className="space-y-2">
+           <h4 className="text-sm font-semibold text-text-secondary">Join Requests</h4>
+           <div className="space-y-2 mt-2">
               {requestingMembers.map((member) => (
-                <li key={member.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {member.profilePicture && (
-                      <img
-                        src={member.profilePicture}
-                        alt={member.name}
-                        className="h-6 w-6 rounded-full mr-2"
-                      />
-                    )}
-                    <span className="text-sm font-medium text-gray-900">{member.name}</span>
+                <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-surface border border-surface/50">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={member.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || '')}&background=6366f1&color=fff`}
+                      alt={member.name || 'Anonymous'}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="text-sm font-medium text-text">{member.name}</span>
                   </div>
                   <div className="flex space-x-2">
-                    {onAcceptRequest && (
-                      <button
-                        onClick={() => onAcceptRequest(member.id)}
-                        className="text-green-600 hover:text-green-900 text-sm"
-                      >
-                        Accept
-                      </button>
-                    )}
-                    {onRejectRequest && (
-                      <button
-                        onClick={() => onRejectRequest(member.id)}
-                        className="text-red-600 hover:text-red-900 text-sm"
-                      >
-                        Reject
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onAcceptRequest?.(member.id)}
+                      className="p-1.5 rounded-full bg-success/20 text-success hover:bg-success/30 transition-colors"
+                      title="Accept Request"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => onRejectRequest?.(member.id)}
+                      className="p-1.5 rounded-full bg-error/20 text-error hover:bg-error/30 transition-colors"
+                      title="Reject Request"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
-        {!isTeamLead && (membersWithNames.length < team.maxMembers || isMember) && (
-          <div className="mt-6">
-            {isMember ? (
-              <button
-                onClick={onLeave}
-                className="w-full rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-              >
-                Leave Team
-              </button>
-            ) : (
-              <button
-                onClick={onJoin}
-                disabled={isFull}
-                className={`w-full rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isFull
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
-                }`}
-              >
-                {isFull ? 'Team is Full' : 'Join Team'}
-              </button>
-            )}
-          </div>
-        )}
+      {/* Footer Actions and Code */}
+      <div className="flex items-center justify-between pt-4 border-t border-surface">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-text-secondary">Team Code:</span>
+          <code className="px-2 py-1 rounded bg-surface text-sm font-mono text-text">{team.teamCode}</code>
+        </div>
+        <div className="flex space-x-2">
+          {!isMember && team.members.length < team.maxMembers && (
+            <button
+              onClick={onJoin}
+              className="btn btn-primary text-sm"
+            >
+              Join Team
+            </button>
+          )}
+          {isMember && !isTeamLead && (
+            <button
+              onClick={onLeave}
+              className="btn btn-outline text-sm"
+            >
+              Leave Team
+            </button>
+          )}
+          {onSkillMatch && (
+            <button
+              onClick={onSkillMatch}
+              className="btn btn-secondary text-sm"
+            >
+              Match Skills
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

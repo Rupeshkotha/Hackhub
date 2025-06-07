@@ -18,13 +18,28 @@ const TeamForm: React.FC<TeamFormProps> = ({ initialData, onSubmit, onCancel }) 
     maxMembers: 4,
     hackathonId: '',
     hackathonName: '',
-    ...initialData,
   });
   const [skillInput, setSkillInput] = useState('');
   const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [teamCode, setTeamCode] = useState(initialData?.teamCode || '');
+  const [teamCode, setTeamCode] = useState('');
+
+  // Initialize form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      console.log('Initializing form with data:', initialData);
+      setFormData({
+        name: initialData.name,
+        description: initialData.description,
+        requiredSkills: initialData.requiredSkills || [],
+        maxMembers: initialData.maxMembers,
+        hackathonId: initialData.hackathonId,
+        hackathonName: initialData.hackathonName,
+      });
+      setTeamCode(initialData.teamCode);
+    }
+  }, [initialData]);
 
   // Common skills for suggestions
   const commonSkills = [
@@ -56,21 +71,34 @@ const TeamForm: React.FC<TeamFormProps> = ({ initialData, onSubmit, onCancel }) 
   };
 
   const handleSkillSuggestionClick = (skill: string) => {
-    if (!formData.requiredSkills?.includes(skill)) {
-      setFormData(prev => ({
-        ...prev,
-        requiredSkills: [...(prev.requiredSkills || []), skill],
-      }));
-    }
+    console.log('Adding skill:', skill);
+    setFormData(prev => {
+      const currentSkills = prev.requiredSkills || [];
+      if (!currentSkills.includes(skill)) {
+        const newSkills = [...currentSkills, skill];
+        console.log('New skills array:', newSkills);
+        return {
+          ...prev,
+          requiredSkills: newSkills,
+        };
+      }
+      return prev;
+    });
     setSkillInput('');
     setSkillSuggestions([]);
   };
 
   const removeSkill = (skillToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      requiredSkills: prev.requiredSkills?.filter(skill => skill !== skillToRemove),
-    }));
+    console.log('Removing skill:', skillToRemove);
+    setFormData(prev => {
+      const currentSkills = prev.requiredSkills || [];
+      const newSkills = currentSkills.filter(skill => skill !== skillToRemove);
+      console.log('New skills array after removal:', newSkills);
+      return {
+        ...prev,
+        requiredSkills: newSkills,
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,35 +112,65 @@ const TeamForm: React.FC<TeamFormProps> = ({ initialData, onSubmit, onCancel }) 
         throw new Error('Please select a hackathon');
       }
 
-      const teamData: Omit<Team, 'id' | 'teamCode'> = {
-        name: formData.name || '',
-        description: formData.description || '',
-        requiredSkills: formData.requiredSkills || [],
-        maxMembers: formData.maxMembers || 4,
-        hackathonId: formData.hackathonId,
-        hackathonName: formData.hackathonName,
-        members: initialData?.members || [{
-          id: currentUser.uid,
-          name: currentUser.displayName || 'Anonymous',
-          role: 'Team Lead',
-          skills: [],
-        }],
-        createdAt: initialData?.createdAt || new Date(),
-        createdBy: currentUser.uid,
-      };
+      console.log('Form data before submit:', formData);
+      console.log('Initial data:', initialData);
 
       if (initialData) {
-        await updateTeam(initialData.id, teamData);
-        onSubmit({ ...teamData, id: initialData.id, teamCode: initialData.teamCode });
+        // For updates, only send fields that have values
+        const updates: Partial<Team> = {};
+        
+        if (formData.name) updates.name = formData.name;
+        if (formData.description) updates.description = formData.description;
+        if (formData.requiredSkills) {
+          updates.requiredSkills = formData.requiredSkills;
+        }
+        if (formData.maxMembers) updates.maxMembers = formData.maxMembers;
+        if (formData.hackathonId) updates.hackathonId = formData.hackathonId;
+        if (formData.hackathonName) updates.hackathonName = formData.hackathonName;
+
+        console.log('Updating team with:', updates);
+        await updateTeam(initialData.id, updates);
+        const updatedTeam = await getTeam(initialData.id);
+        console.log('Team after update:', updatedTeam);
+        
+        if (updatedTeam) {
+          onSubmit(updatedTeam);
+        } else {
+          throw new Error('Failed to fetch updated team');
+        }
       } else {
-        const teamId = await createTeam(teamData);
+        // For new teams, ensure all required fields are set
+        const newTeamData = {
+          name: formData.name || '',
+          description: formData.description || '',
+          requiredSkills: Array.isArray(formData.requiredSkills) ? formData.requiredSkills : [],
+          maxMembers: typeof formData.maxMembers === 'number' ? formData.maxMembers : 4,
+          hackathonId: formData.hackathonId,
+          hackathonName: formData.hackathonName,
+          members: [{
+            id: currentUser.uid,
+            name: currentUser.displayName || 'Anonymous',
+            role: 'Team Lead',
+            skills: [],
+            ...(currentUser.photoURL ? { avatar: currentUser.photoURL } : {})
+          }],
+          createdAt: new Date(),
+          createdBy: currentUser.uid,
+          joinRequests: []
+        };
+
+        console.log('Creating new team with data:', newTeamData);
+        const teamId = await createTeam(newTeamData);
         const newTeam = await getTeam(teamId);
         if (newTeam) {
           setTeamCode(newTeam.teamCode);
           onSubmit(newTeam);
+        } else {
+          throw new Error('Failed to fetch new team');
         }
       }
     } catch (err) {
+      console.error('Error updating team:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
